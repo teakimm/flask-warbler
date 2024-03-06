@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 toolbar = DebugToolbarExtension(app)
 
@@ -34,12 +34,10 @@ def add_user_to_g():
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
         g.csrf_form = CSRFProtectForm()
-        print('***************', g.user)
-
     else:
         g.user = None
 
-
+#TODO: can run this together with above instead of line 36
 # @app.before_request
 # def do_crsf():
 #     """add crsf form to flask global"""
@@ -84,8 +82,12 @@ def signup():
             )
             db.session.commit()
 
-        except IntegrityError:
-            flash("Username already taken", 'danger')
+        except IntegrityError as e:
+            detail = str(e.orig)
+            if("username" in detail):
+                form.username.errors = ["Username already exists."]
+            if("email" in detail):
+                form.email.errors = ["Email already exists."]
             return render_template('users/signup.html', form=form)
 
         do_login(user)
@@ -121,8 +123,9 @@ def login():
 @app.post('/logout')
 def logout():
     """Handle logout of user and redirect to homepage."""
+#TODO: give authorize error or flash if they dont have a user or form invalid
 
-    if not g.user or not form.validate_on_submit():
+    if not g.user:
         return redirect('/')
 
     form = g.csrf_form
@@ -206,7 +209,7 @@ def start_following(follow_id):
         return redirect("/")
 
     form = g.csrf_form
-
+    #if form does not validate flash unauthorized and redirect
     if form.validate_on_submit():
         followed_user = User.query.get_or_404(follow_id)
         g.user.following.append(followed_user)
@@ -242,7 +245,7 @@ def stop_following(follow_id):
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
     """Update profile for current user."""
-
+#TODO: fix cancel button
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
@@ -257,7 +260,7 @@ def profile():
                 image_url = form.image_url.data or DEFAULT_IMAGE_URL
                 header_image_url = form.header_image_url.data or DEFAULT_HEADER_IMAGE_URL
                 bio = form.bio.data
-
+                #TODO: can update g from form, move lines outside of try block
                 g.user.username = username
                 g.user.email = email
                 g.user.image_url = image_url
@@ -267,7 +270,11 @@ def profile():
 
             except IntegrityError as e:
                 db.session.rollback()
-                print("*****************************88888888888", str(e))
+                detail = str(e.orig)
+                if("username" in detail):
+                    form.username.errors = ["Username already exists."]
+                if("email" in detail):
+                    form.email.errors = ["Email already exists."]
                 return render_template('/users/edit.html', form=form)
 
             return redirect(f'/users/{g.user.id}')
@@ -290,7 +297,7 @@ def delete_user():
         return redirect("/")
 
     form = g.csrf_form
-
+    #FIXME: implement delete user before moving on
     do_logout()
 
     db.session.delete(g.user)
@@ -344,7 +351,7 @@ def delete_message(message_id):
     Check that this message was written by the current user.
     Redirect to user page on success.
     """
-
+    #FIXME: csrf check if different user cannot delete other messages
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
@@ -367,10 +374,11 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of self & followed_users
     """
-
     if g.user:
+        followed_users = [following.id for following in g.user.following]
         messages = (Message
                     .query
+                    .filter((Message.user_id == g.user.id) | (Message.user_id.in_(followed_users))) #TODO: can append own id into list
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
