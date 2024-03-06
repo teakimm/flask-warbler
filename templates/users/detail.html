@@ -4,6 +4,9 @@
 
 <div id="warbler-hero"
      class="full-width">
+     <img style="height:100%; width:100%; object-fit: cover" src="{{ user.header_image_url }}"
+     alt="Banner for {{ user.username }}"
+     id="profile-banner">
 </div>
 <img src="{{ user.image_url }}"
      alt="Image for {{ user.username }}"
@@ -60,10 +63,12 @@
             {% if g.user.is_following(user) %}
             <form method="POST"
                   action="/users/stop-following/{{ user.id }}">
+              {{ g.csrf_form.hidden_tag() }}
               <button class="btn btn-primary">Unfollow</button>
             </form>
             {% else %}
             <form method="POST" action="/users/follow/{{ user.id }}">
+              {{ g.csrf_form.hidden_tag() }}
               <button class="btn btn-outline-primary">Follow</button>
             </form>
             {% endif %}
@@ -80,10 +85,10 @@
 <div class="row">
   <div class="col-sm-3">
     <h4 id="sidebar-username">@{{ user.username }}</h4>
-    <p>BIO HERE</p>
+    <p>{{user.bio}}</p>
     <p class="user-location">
       <span class="bi bi-map"></span>
-      LOCATION HERE
+      {{ user.location }}
     </p>
   </div>
 
