@@ -5,8 +5,8 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm, CSRFProtectForm
-from models import db, connect_db, User, Message
+from forms import UserAddForm, LoginForm, MessageForm, CSRFProtectForm, UpdateProfileForm
+from models import db, connect_db, User, Message, DEFAULT_IMAGE_URL, DEFAULT_HEADER_IMAGE_URL
 
 load_dotenv()
 
@@ -34,6 +34,7 @@ def add_user_to_g():
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
         g.csrf_form = CSRFProtectForm()
+        print('***************', g.user)
 
     else:
         g.user = None
@@ -121,10 +122,10 @@ def login():
 def logout():
     """Handle logout of user and redirect to homepage."""
 
-    form = g.csrf_form
-
     if not g.user or not form.validate_on_submit():
         return redirect('/')
+
+    form = g.csrf_form
 
     if form.validate_on_submit():
         flash(f'{g.user.username} successfully logged out!')
@@ -199,11 +200,12 @@ def start_following(follow_id):
 
     Redirect to following page for the current for the current user.
     """
-    form = g.csrf_form
 
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
+
+    form = g.csrf_form
 
     if form.validate_on_submit():
         followed_user = User.query.get_or_404(follow_id)
@@ -221,13 +223,11 @@ def stop_following(follow_id):
 
     Redirect to following page for the current for the current user.
     """
-
-    form = g.csrf_form
-
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
+    form = g.csrf_form
 
     if form.validate_on_submit():
         followed_user = User.query.get_or_404(follow_id)
@@ -243,7 +243,35 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
-    # IMPLEMENT THIS
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    form = UpdateProfileForm(obj=g.user)
+
+    if form.validate_on_submit():
+        if User.authenticate(g.user.username, form.password.data):
+            username = form.username.data
+            email = form.email.data
+            image_url = form.image_url.data or DEFAULT_IMAGE_URL
+            header_image_url = form.header_image_url.data or DEFAULT_HEADER_IMAGE_URL
+            bio = form.bio.data
+
+            g.user.username = username
+            g.user.email = email
+            g.user.image_url = image_url
+            g.header_image_url = header_image_url
+            g.bio = bio
+
+            db.session.commit()
+
+            return redirect(f'/users/{g.user.id}')
+        else:
+            form.password.errors = ["Wrong password"]
+            return render_template('/users/edit.html', form=form)
+    else:
+        return render_template('/users/edit.html', form=form)
+
 
 
 @app.post('/users/delete')
@@ -252,12 +280,11 @@ def delete_user():
 
     Redirect to signup page.
     """
-
-    form = g.csrf_form
-
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
+
+    form = g.csrf_form
 
     do_logout()
 
