@@ -49,9 +49,10 @@ class LoginForm(FlaskForm):
 class UpdateProfileForm(UserAddForm):
     """Update User Profile"""
 
+
     header_image_url = StringField(
         '(Optional) Image URL',
-        validators=[InputRequired(), URL(), Length(max=255)]
+        validators=[Optional(), URL(), Length(max=255)]
     )
 
     bio = TextAreaField(

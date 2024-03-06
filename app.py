@@ -33,15 +33,14 @@ def add_user_to_g():
 
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
-        g.csrf_form = CSRFProtectForm()
+
     else:
         g.user = None
 
-#TODO: can run this together with above instead of line 36
-# @app.before_request
-# def do_crsf():
-#     """add crsf form to flask global"""
-#     g.crsf_form = CSRFProtectForm()
+@app.before_request
+def do_csrf():
+    """add crsf form to flask global"""
+    g.csrf_form = CSRFProtectForm()
 
 def do_login(user):
     """Log in user."""
@@ -123,17 +122,16 @@ def login():
 @app.post('/logout')
 def logout():
     """Handle logout of user and redirect to homepage."""
-#TODO: give authorize error or flash if they dont have a user or form invalid
-
-    if not g.user:
-        return redirect('/')
-
     form = g.csrf_form
 
-    if form.validate_on_submit():
-        flash(f'{g.user.username} successfully logged out!')
-        do_logout()
-        return redirect('/login')
+    if not g.user or not form.validate_on_submit():
+        flash("Access unauthorized.", "danger")
+        return redirect('/')
+
+
+    do_logout()
+    flash(f'{g.user.username} successfully logged out!')
+    return redirect('/login')
 
 
 ##############################################################################
@@ -203,19 +201,15 @@ def start_following(follow_id):
 
     Redirect to following page for the current for the current user.
     """
+    form = g.csrf_form
 
-    if not g.user:
+    if not g.user or not form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = g.csrf_form
-    #if form does not validate flash unauthorized and redirect
-    if form.validate_on_submit():
-        followed_user = User.query.get_or_404(follow_id)
-        g.user.following.append(followed_user)
-        db.session.commit()
-    else:
-        return redirect("/")
+    followed_user = User.query.get_or_404(follow_id)
+    g.user.following.append(followed_user)
+    db.session.commit()
 
     return redirect(f"/users/{g.user.id}/following")
 
@@ -226,18 +220,17 @@ def stop_following(follow_id):
 
     Redirect to following page for the current for the current user.
     """
-    if not g.user:
+    form = g.csrf_form
+
+    if not g.user or not form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = g.csrf_form
 
-    if form.validate_on_submit():
-        followed_user = User.query.get_or_404(follow_id)
-        g.user.following.remove(followed_user)
-        db.session.commit()
-    else:
-        return redirect("/")
+
+    followed_user = User.query.get_or_404(follow_id)
+    g.user.following.remove(followed_user)
+    db.session.commit()
 
     return redirect(f"/users/{g.user.id}/following")
 
@@ -245,7 +238,6 @@ def stop_following(follow_id):
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
     """Update profile for current user."""
-#TODO: fix cancel button
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
@@ -254,35 +246,28 @@ def profile():
 
     if form.validate_on_submit():
         if User.authenticate(g.user.username, form.password.data):
+            g.user.username = form.username.data
+            g.user.email = form.email.data
+            g.user.image_url = form.image_url.data or DEFAULT_IMAGE_URL
+            g.user.header_image_url = form.header_image_url.data or DEFAULT_HEADER_IMAGE_URL
+            g.user.bio = form.bio.data
             try:
-                username = form.username.data
-                email = form.email.data
-                image_url = form.image_url.data or DEFAULT_IMAGE_URL
-                header_image_url = form.header_image_url.data or DEFAULT_HEADER_IMAGE_URL
-                bio = form.bio.data
-                #TODO: can update g from form, move lines outside of try block
-                g.user.username = username
-                g.user.email = email
-                g.user.image_url = image_url
-                g.user.header_image_url = header_image_url
-                g.user.bio = bio
                 db.session.commit()
-
             except IntegrityError as e:
                 db.session.rollback()
                 detail = str(e.orig)
+
                 if("username" in detail):
                     form.username.errors = ["Username already exists."]
-                if("email" in detail):
-                    form.email.errors = ["Email already exists."]
-                return render_template('/users/edit.html', form=form)
+
+                return render_template('/users/edit.html', form=form, user=g.user)
 
             return redirect(f'/users/{g.user.id}')
         else:
             form.password.errors = ["Wrong password"]
-            return render_template('/users/edit.html', form=form)
+            return render_template('/users/edit.html', form=form, user=g.user)
     else:
-        return render_template('/users/edit.html', form=form)
+        return render_template('/users/edit.html', form=form, user=g.user)
 
 
 
@@ -292,16 +277,21 @@ def delete_user():
 
     Redirect to signup page.
     """
-    if not g.user:
+    form = g.csrf_form
+
+    if not g.user or not form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = g.csrf_form
-    #FIXME: implement delete user before moving on
     do_logout()
+
+    for message in g.user.messages:
+        db.session.delete(message)
+        db.session.commit()
 
     db.session.delete(g.user)
     db.session.commit()
+    flash('User has been deleted, goodbye!')
 
     return redirect("/signup")
 
@@ -375,10 +365,10 @@ def homepage():
     - logged in: 100 most recent messages of self & followed_users
     """
     if g.user:
-        followed_users = [following.id for following in g.user.following]
+        followed_users_and_me = [following.id for following in g.user.following] + [g.user.id]
         messages = (Message
                     .query
-                    .filter((Message.user_id == g.user.id) | (Message.user_id.in_(followed_users))) #TODO: can append own id into list
+                    .filter((Message.user_id.in_(followed_users_and_me)))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
