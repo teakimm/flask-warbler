@@ -56,7 +56,7 @@ class UpdateProfileForm(UserAddForm):
 
     bio = TextAreaField(
         'Bio',
-        validators=[InputRequired()])
+        validators=[Optional()])
 
 
 

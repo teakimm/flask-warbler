@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, PendingRollbackError
 
 from forms import UserAddForm, LoginForm, MessageForm, CSRFProtectForm, UpdateProfileForm
 from models import db, connect_db, User, Message, DEFAULT_IMAGE_URL, DEFAULT_HEADER_IMAGE_URL
@@ -251,19 +251,24 @@ def profile():
 
     if form.validate_on_submit():
         if User.authenticate(g.user.username, form.password.data):
-            username = form.username.data
-            email = form.email.data
-            image_url = form.image_url.data or DEFAULT_IMAGE_URL
-            header_image_url = form.header_image_url.data or DEFAULT_HEADER_IMAGE_URL
-            bio = form.bio.data
+            try:
+                username = form.username.data
+                email = form.email.data
+                image_url = form.image_url.data or DEFAULT_IMAGE_URL
+                header_image_url = form.header_image_url.data or DEFAULT_HEADER_IMAGE_URL
+                bio = form.bio.data
 
-            g.user.username = username
-            g.user.email = email
-            g.user.image_url = image_url
-            g.header_image_url = header_image_url
-            g.bio = bio
+                g.user.username = username
+                g.user.email = email
+                g.user.image_url = image_url
+                g.user.header_image_url = header_image_url
+                g.user.bio = bio
+                db.session.commit()
 
-            db.session.commit()
+            except IntegrityError as e:
+                db.session.rollback()
+                print("*****************************88888888888", str(e))
+                return render_template('/users/edit.html', form=form)
 
             return redirect(f'/users/{g.user.id}')
         else:
