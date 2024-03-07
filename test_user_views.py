@@ -92,3 +92,139 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("@u1", html)
+
+    def test_view_followers(self):
+        """Tests that user is able to see follower page for any user"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+            u1 = User.query.get(self.u1_id)
+            u2 = User.query.get(self.u2_id)
+
+            u2.following.append(u1)
+
+            resp = client.get(f'/users/{self.u1_id}/followers')
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("@u2", html)
+
+    def test_logged_out_view(self):
+        """Tests that logged out users are blocked from viewing user's
+        following page"""
+        with app.test_client() as client:
+
+            resp = client.get(
+                f'/users/{self.u1_id}/followers',
+                follow_redirects=True
+            )
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
+
+    def test_follow_user(self):
+        """Tests that user correctly can follow another user"""
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+            u1 = User.query.get(self.u1_id)
+            u2 = User.query.get(self.u2_id)
+
+
+            resp = client.post(f'/users/follow/{self.u2_id}',
+                               follow_redirects=True)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(u2.is_followed_by(u1), True)
+            self.assertIn(
+                f'<a href="/users/{self.u1_id}/following">\n                1\n              </a>', html
+                )
+
+
+    def test_unfollow_user(self):
+        """Tests that user correctly can unfollow another user"""
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+            u1 = User.query.get(self.u1_id)
+            u2 = User.query.get(self.u2_id)
+
+            #u1 is now following u2
+            u1.following.append(u2)
+
+            resp = client.post(f'/users/stop-following/{self.u2_id}',
+                               follow_redirects=True)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(u2.is_followed_by(u1), False)
+            self.assertIn(
+                f'<a href="/users/{self.u1_id}/following">\n                0\n              </a>', html
+                )
+
+    def test_delete_user(self):
+        """test if logged in user can delete their profile and logged out"""
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = client.post(f"/users/delete", follow_redirects=True)
+
+        html = resp.get_data(as_text=True)
+
+        self.assertIn('User has been deleted, goodbye!', html)
+        #querying for a deleted user should give back None
+        self.assertEqual(User.query.get(self.u1_id), None)
+
+    def test_update_profile(self):
+        """tests to see if the user can change their profile using valid
+        form inputs"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = client.post('/users/profile',
+                           data={"username": "newName",
+                                 "email" : "new@email.com",
+                                 "bio" : "this is the new me.",
+                                 "password": "password"},
+                                 follow_redirects=True
+                                 )
+
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("@newName", html)
+        self.assertIn("this is the new me", html)
+
+
+    def test_invalid_user_update(self):
+        """Tests to see if a user tries to update their profile with an existing
+        username will get a form warning message"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = client.post('/users/profile',
+                           data={"username": "u2",
+                                 "email" : "u1@email.com",
+                                 "password": "password"},
+                                 follow_redirects=True
+                                 )
+
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Username already exists.", html)
