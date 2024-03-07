@@ -7,6 +7,7 @@
 
 import os
 from unittest import TestCase
+from sqlalchemy.exc import IntegrityError
 
 from models import db, User, Message, Follow
 
@@ -83,6 +84,36 @@ class UserModelTestCase(TestCase):
         u2 = User.query.get(self.u2_id)
 
         self.assertEqual(u1.is_followed_by(u2), False)
+
+    def test_valid_user_signup(self):
+        u3 = User.signup("u3", "u3@email.com", "password", None)
+
+        self.assertIsInstance(u3, User)
+        self.assertEqual(u3.email, "u3@email.com")
+
+    def test_invalid_user_signup(self):
+        #u2 already exists
+        User.signup("u2", "u2@email.com", "password", None)
+        User.signup(None, "None", "password", None)
+
+        self.assertRaises(IntegrityError, db.session.commit)
+
+    def test_valid_user_authenticate(self):
+        u1_auth_check = User.authenticate("u1", "password")
+        u1 = User.query.get(self.u1_id)
+
+        self.assertEqual(u1_auth_check, u1)
+
+    def test_invalid_user_authenticate(self):
+        invalid_username = User.authenticate("not_u1", "password")
+        invalid_password = User.authenticate("u1", "wrongpassword")
+
+        self.assertEqual(invalid_username, False)
+        self.assertEqual(invalid_password, False)
+
+
+
+
 
 
 
