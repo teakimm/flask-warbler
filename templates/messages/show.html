@@ -19,10 +19,17 @@
             <a href="/users/{{ message.user.id }}">
               @{{ message.user.username }}
             </a>
-            <form style="z-index: 3" action="/messages/{{ message.id }}/like" method="POST">
-              {{ g.csrf_form.hidden_tag() }}
-              <button type="submit"><i class="bi bi-heart"></i></button>
-            </form>
+            {% if message in g.user.liked_messages %}
+              <form style="z-index: 3" action="/messages/{{ message.id }}/unlike" method="POST">
+                {{ g.csrf_form.hidden_tag() }}
+                <button type="submit"><i class="bi bi-heart-fill"></i></button>
+              </form>
+            {% elif not message in g.user.liked_messages %}
+              <form style="z-index: 3" action="/messages/{{ message.id }}/like" method="POST">
+                {{ g.csrf_form.hidden_tag() }}
+                <button type="submit"><i class="bi bi-heart"></i></button>
+              </form>
+            {% endif %}
             {% if g.user %}
             {% if g.user.id == message.user.id %}
             <form method="POST"

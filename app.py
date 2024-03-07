@@ -399,6 +399,23 @@ def like_message(message_id):
 
     return redirect(request.referrer)
 
+@app.post("/messages/<int:message_id>/unlike")
+def unlike_message(message_id):
+
+    form = g.csrf_form
+
+    if not g.user or not form.validate_on_submit():
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    current_msg = Message.query.get_or_404(message_id)
+
+    g.user.liked_messages.remove(current_msg)
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
 
 @app.after_request
 def add_header(response):
