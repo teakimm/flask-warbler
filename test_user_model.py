@@ -45,13 +45,19 @@ class UserModelTestCase(TestCase):
         db.session.rollback()
 
     def test_user_model(self):
+        """tests User instance is made properly"""
         u1 = User.query.get(self.u1_id)
 
         # User should have no messages & no followers
         self.assertEqual(len(u1.messages), 0)
         self.assertEqual(len(u1.followers), 0)
 
+        # User should have the right username
+        self.assertEqual(u1.username , "u1")
+
     def test_is_following(self):
+        """tests that is_following evaluates following relationship correctly
+        is following the other"""
         u1 = User.query.get(self.u1_id)
         u2 = User.query.get(self.u2_id)
 
@@ -62,6 +68,9 @@ class UserModelTestCase(TestCase):
 
 
     def test_is_not_following(self):
+        """tests that is_following evaluates following relationship correctly
+        if user is not following the other"""
+
         u1 = User.query.get(self.u1_id)
         u2 = User.query.get(self.u2_id)
 
@@ -71,6 +80,8 @@ class UserModelTestCase(TestCase):
         self.assertEqual(u2.is_following(u1), True)
 
     def test_is_followed_by(self):
+        """tests that is_followed_by evaluates following relationship correctly
+        if user is followed by the other"""
         u1 = User.query.get(self.u1_id)
         u2 = User.query.get(self.u2_id)
 
@@ -80,18 +91,23 @@ class UserModelTestCase(TestCase):
         self.assertEqual(u2.is_followed_by(u1), False)
 
     def test_is_not_followed_by(self):
+        """tests that is_followed_by evaluates following relationship correctly
+        if user is not followed by the other"""
         u1 = User.query.get(self.u1_id)
         u2 = User.query.get(self.u2_id)
 
         self.assertEqual(u1.is_followed_by(u2), False)
 
     def test_valid_user_signup(self):
+        """tests proper user sign up if given valid credentials"""
         u3 = User.signup("u3", "u3@email.com", "password", None)
 
         self.assertIsInstance(u3, User)
         self.assertEqual(u3.email, "u3@email.com")
 
     def test_invalid_user_signup(self):
+        """tests proper error raised if user signup is given invalid credentials"""
+
         #u2 already exists
         User.signup("u2", "u2@email.com", "password", None)
         User.signup(None, "None", "password", None)
@@ -99,12 +115,15 @@ class UserModelTestCase(TestCase):
         self.assertRaises(IntegrityError, db.session.commit)
 
     def test_valid_user_authenticate(self):
+        """tests that authenticate method returns correct user instance if
+        user is authenticated"""
         u1_auth_check = User.authenticate("u1", "password")
         u1 = User.query.get(self.u1_id)
 
         self.assertEqual(u1_auth_check, u1)
 
     def test_invalid_user_authenticate(self):
+        """tests that authenticate method returns false if user is not authenticated"""
         invalid_username = User.authenticate("not_u1", "password")
         invalid_password = User.authenticate("u1", "wrongpassword")
 
