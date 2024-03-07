@@ -21,6 +21,10 @@
             </span>
         <p>{{ message.text }}</p>
       </div>
+      <form style="z-index: 3" action="/messages/{{ message.id }}/like" method="POST">
+        {{ g.csrf_form.hidden_tag() }}
+        <button type="submit"><i class="bi bi-heart"></i></button>
+      </form>
     </li>
 
     {% endfor %}

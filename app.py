@@ -6,7 +6,8 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError, PendingRollbackError
 
 from forms import UserAddForm, LoginForm, MessageForm, CSRFProtectForm, UpdateProfileForm
-from models import db, connect_db, User, Message, DEFAULT_IMAGE_URL, DEFAULT_HEADER_IMAGE_URL
+from models import db, connect_db, User, Message, Like, \
+    DEFAULT_IMAGE_URL, DEFAULT_HEADER_IMAGE_URL
 
 load_dotenv()
 
@@ -341,8 +342,9 @@ def delete_message(message_id):
     Check that this message was written by the current user.
     Redirect to user page on success.
     """
-    #FIXME: csrf check if different user cannot delete other messages
-    if not g.user:
+    form = g.csrf_form
+
+    if not g.user or not form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -379,6 +381,25 @@ def homepage():
         return render_template('home-anon.html')
 
 
+@app.post("/messages/<int:message_id>/like")
+def like_message(message_id):
+
+    form = g.csrf_form
+
+    if not g.user or not form.validate_on_submit():
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    current_msg = Message.query.get_or_404(message_id)
+
+    new_like = Like(user_id = g.user.id, message_id = current_msg.id)
+
+    db.session.add(new_like)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @app.after_request
 def add_header(response):
     """Add non-caching headers on every request."""
@@ -386,3 +407,5 @@ def add_header(response):
     # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
     response.cache_control.no_store = True
     return response
+
+

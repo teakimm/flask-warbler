@@ -48,15 +48,20 @@
       <ul class="list-group" id="messages">
         {% for msg in messages %}
           <li class="list-group-item">
-            <a href="/messages/{{ msg.id }}" class="message-link"/>
+            <a href="/messages/{{ msg.id }}" class="message-link">
             <a href="/users/{{ msg.user.id }}">
               <img src="{{ msg.user.image_url }}" alt="" class="timeline-image">
             </a>
             <div class="message-area">
               <a href="/users/{{ msg.user.id }}">@{{ msg.user.username }}</a>
               <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
+
               <p>{{ msg.text }}</p>
             </div>
+            <form style="z-index: 3" action="/messages/{{ msg.id }}/like" method="POST">
+              {{ g.csrf_form.hidden_tag() }}
+              <button type="submit"><i class="bi bi-heart"></i></button>
+            </form>
           </li>
         {% endfor %}
       </ul>
