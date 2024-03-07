@@ -548,3 +548,12 @@ p.card-bio {
 .message-404 input {
   flex: 1;
 }
+
+.like {
+  background: none;
+  border: none;
+}
+
+.bi-heart-fill {
+  color: rgb(255, 69, 100);
+}

@@ -401,8 +401,12 @@ def like_message(message_id):
 
     current_msg = Message.query.get_or_404(message_id)
 
-    if not g.user or not form.validate_on_submit() or (current_msg.user == g.user):
+    if not g.user or (current_msg.user == g.user): #TODO: move validation check
         flash("Access unauthorized.", "danger")
+        return redirect("/")
+    #TODO: we could append liked message
+
+    if not form.validate_on_submit():
         return redirect("/")
 
 
@@ -411,7 +415,7 @@ def like_message(message_id):
     db.session.add(new_like)
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(request.referrer) #TODO: refer can be spoofed and not best practice, consider using form fields
 
 
 @app.post("/messages/<int:message_id>/unlike")

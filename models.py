@@ -87,18 +87,15 @@ class User(db.Model):
         db.String(100),
         nullable=False,
     )
-    # messages = db.relationship(
-    #     'Message',
-    #     secondary="likes",
-    #     backref="user"
-    # )
 
     messages = db.relationship('Message', backref="user")
 
     liked_messages = db.relationship(
         'Message',
         secondary = 'likes',
-        backref="users_liked_by")
+        backref="users_liked_by",
+        collection_class=set
+        )
 
     followers = db.relationship(
         "User",

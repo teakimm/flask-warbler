@@ -61,12 +61,12 @@
             {% if msg in g.user.liked_messages and msg.user != g.user %}
               <form style="z-index: 3" action="/messages/{{ msg.id }}/unlike" method="POST">
                 {{ g.csrf_form.hidden_tag() }}
-                <button type="submit"><i class="bi bi-heart-fill"></i></button>
+                <button class="like" type="submit"><i class="bi bi-heart-fill"></i></button>
               </form>
               {% elif not msg in g.user.liked_messages and msg.user != g.user %}
               <form style="z-index: 3" action="/messages/{{ msg.id }}/like" method="POST">
                 {{ g.csrf_form.hidden_tag() }}
-                <button type="submit"><i class="bi bi-heart"></i></button>
+                <button class="like" type="submit"><i class="bi bi-heart"></i></button>
               </form>
             {% endif %}
           </li>
