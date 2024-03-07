@@ -6,7 +6,7 @@
 <div class="row justify-content-center">
   <div class="col-md-6">
     <ul class="list-group no-hover" id="messages">
-      <li class="list-group-item">
+      <li class="list-group-item" id ="{{ message.id }}">
 
         <a href="{{ url_for('show_user', user_id=message.user.id) }}">
           <img src="{{ message.user.image_url }}"
@@ -23,11 +23,13 @@
               <form style="z-index: 3" action="/messages/{{ message.id }}/unlike" method="POST">
                 {{ g.csrf_form.hidden_tag() }}
                 <button class="like" type="submit"><i class="bi bi-heart-fill"></i></button>
+                <input type="hidden" name="location_from" id="" value="{{ request.url }}">
               </form>
               {% elif not message in g.user.liked_messages and message.user != g.user %}
               <form style="z-index: 3" action="/messages/{{ message.id }}/like" method="POST">
                 {{ g.csrf_form.hidden_tag() }}
                 <button class="like" type="submit"><i class="bi bi-heart"></i></button>
+                <input type="hidden" name="location_from" id="" value="{{ request.url }}">
               </form>
             {% endif %}
             {% if g.user %}

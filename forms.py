@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, TextAreaField
+from wtforms import StringField, PasswordField, TextAreaField, HiddenField
 from wtforms.validators import InputRequired, Email, Length, URL, Optional
 
 
@@ -63,3 +63,9 @@ class UpdateProfileForm(UserAddForm):
 
 class CSRFProtectForm(FlaskForm):
     """For Protection Purposes"""
+
+class SaveReference(FlaskForm):
+
+    page_location = HiddenField(
+
+    )

@@ -49,3 +49,44 @@ class UserModelTestCase(TestCase):
         # User should have no messages & no followers
         self.assertEqual(len(u1.messages), 0)
         self.assertEqual(len(u1.followers), 0)
+
+    def test_is_following(self):
+        u1 = User.query.get(self.u1_id)
+        u2 = User.query.get(self.u2_id)
+
+        u1.following.append(u2)
+
+        self.assertEqual(u1.is_following(u2), True)
+        self.assertEqual(u2.is_following(u1), False)
+
+
+    def test_is_not_following(self):
+        u1 = User.query.get(self.u1_id)
+        u2 = User.query.get(self.u2_id)
+
+        u2.following.append(u1)
+
+        self.assertEqual(u1.is_following(u2), False)
+        self.assertEqual(u2.is_following(u1), True)
+
+    def test_is_followed_by(self):
+        u1 = User.query.get(self.u1_id)
+        u2 = User.query.get(self.u2_id)
+
+        u2.following.append(u1)
+
+        self.assertEqual(u1.is_followed_by(u2), True)
+        self.assertEqual(u2.is_followed_by(u1), False)
+
+    def test_is_not_followed_by(self):
+        u1 = User.query.get(self.u1_id)
+        u2 = User.query.get(self.u2_id)
+
+        self.assertEqual(u1.is_followed_by(u2), False)
+
+
+
+
+
+
+

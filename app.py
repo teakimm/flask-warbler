@@ -3,10 +3,10 @@ from dotenv import load_dotenv
 
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
-from sqlalchemy.exc import IntegrityError, PendingRollbackError
+from sqlalchemy.exc import IntegrityError
 
 from forms import UserAddForm, LoginForm, MessageForm, CSRFProtectForm, UpdateProfileForm
-from models import db, connect_db, User, Message, Like, \
+from models import db, connect_db, User, Message, \
     DEFAULT_IMAGE_URL, DEFAULT_HEADER_IMAGE_URL
 
 load_dotenv()
@@ -127,9 +127,12 @@ def logout():
     """Handle logout of user and redirect to homepage."""
     form = g.csrf_form
 
-    if not g.user or not form.validate_on_submit():
+    if not form.validate_on_submit():
+        return redirect("/")
+
+    if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect('/')
+        return redirect("/")
 
     do_logout()
     flash(f'{g.user.username} successfully logged out!')
@@ -217,7 +220,10 @@ def start_following(follow_id):
     """
     form = g.csrf_form
 
-    if not g.user or not form.validate_on_submit():
+    if not form.validate_on_submit():
+        return redirect("/")
+
+    if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -236,7 +242,10 @@ def stop_following(follow_id):
     """
     form = g.csrf_form
 
-    if not g.user or not form.validate_on_submit():
+    if not form.validate_on_submit():
+        return redirect("/")
+
+    if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -290,7 +299,10 @@ def delete_user():
     """
     form = g.csrf_form
 
-    if not g.user or not form.validate_on_submit():
+    if not form.validate_on_submit():
+        return redirect("/")
+
+    if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -353,8 +365,10 @@ def delete_message(message_id):
     Redirect to user page on success.
     """
     form = g.csrf_form
+    if not form.validate_on_submit():
+        return redirect("/")
 
-    if not g.user or not form.validate_on_submit():
+    if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -400,22 +414,22 @@ def like_message(message_id):
     form = g.csrf_form
 
     current_msg = Message.query.get_or_404(message_id)
+    location = request.form["location_from"]
 
-    if not g.user or (current_msg.user == g.user): #TODO: move validation check
+    #TODO: we could append liked message
+    if not g.user or (current_msg.user == g.user):
         flash("Access unauthorized.", "danger")
         return redirect("/")
-    #TODO: we could append liked message
 
     if not form.validate_on_submit():
         return redirect("/")
 
 
-    new_like = Like(user_id=g.user.id, message_id=current_msg.id)
-
-    db.session.add(new_like)
+    # new_like = Like(user_id=g.user.id, message_id=current_msg.id)
+    g.user.liked_messages.add(current_msg)
     db.session.commit()
 
-    return redirect(request.referrer) #TODO: refer can be spoofed and not best practice, consider using form fields
+    return redirect(f"{location}#{ message_id }") #TODO: refer can be spoofed and not best practice, consider using form fields
 
 
 @app.post("/messages/<int:message_id>/unlike")
@@ -425,9 +439,14 @@ def unlike_message(message_id):
     """
     form = g.csrf_form
     current_msg = Message.query.get_or_404(message_id)
+    location = request.form["location_from"]
 
-    if not g.user or not form.validate_on_submit() or (current_msg.user == g.user):
+
+    if not g.user or (current_msg.user == g.user):
         flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    if not form.validate_on_submit():
         return redirect("/")
 
 
@@ -435,7 +454,7 @@ def unlike_message(message_id):
 
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(f"{location}#{ message_id }")
 
 
 @app.after_request

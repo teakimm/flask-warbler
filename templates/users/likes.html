@@ -5,7 +5,7 @@
 
     {% for message in user.liked_messages %}
 
-    <li class="list-group-item">
+    <li class="list-group-item" id ="{{ message.id }}">
       <a href="/messages/{{ message.id }}" class="message-link"></a>
 
       <a href="/users/{{ message.user.id }}">
@@ -23,11 +23,15 @@
       <form style="z-index: 3" action="/messages/{{ message.id }}/unlike" method="POST">
         {{ g.csrf_form.hidden_tag() }}
         <button class="like" type="submit"><i class="bi bi-heart-fill"></i></button>
+        <input type="hidden" name="location_from" id="" value="{{ request.url }}">
+
       </form>
       {% elif not message in g.user.liked_messages and message.user != g.user %}
       <form style="z-index: 3" action="/messages/{{ message.id }}/like" method="POST">
         {{ g.csrf_form.hidden_tag() }}
         <button class="like" type="submit"><i class="bi bi-heart"></i></button>
+        <input type="hidden" name="location_from" id="" value="{{ request.url }}">
+
       </form>
       {% endif %}
     </li>
