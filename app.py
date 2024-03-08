@@ -365,10 +365,13 @@ def delete_message(message_id):
     Redirect to user page on success.
     """
     form = g.csrf_form
+
     if not form.validate_on_submit():
         return redirect("/")
 
-    if not g.user:
+    current_msg = Message.query.get_or_404(message_id)
+
+    if not g.user or current_msg.user != g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 

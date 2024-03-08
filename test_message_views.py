@@ -47,6 +47,7 @@ class MessageBaseViewTestCase(TestCase):
         u2 = User.signup("u2", "u2@email.com", "password", None)
 
         db.session.flush()
+        db.session.commit()
 
         m1 = Message(text="m1-text", user_id=u1.id)
         m2 = Message(text="m2-text", user_id=u2.id)
@@ -95,10 +96,77 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = c.post(f'messages/{self.m2_id}/like',
-                      follow_redirects=True)
+        resp = c.post(f'/messages/{self.m2_id}/like',
+               data={"location_from": "http://localhost:5000/"},
+               follow_redirects = True)
 
         m2 = Message.query.get(self.m2_id)
         u1 = User.query.get(self.u1_id)
-        # breakpoint()
-        self.assertTrue(m2 in u1.liked_messages)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(m2 in u1.liked_messages, True)
+
+
+    def test_unlike_message(self):
+        """tests that like is properly added to message"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        #To unlike, we must have a liked post
+        c.post(f'/messages/{self.m2_id}/like',
+               data={"location_from": "http://localhost:5000/"},
+               follow_redirects = True)
+
+        resp = c.post(f'/messages/{self.m2_id}/unlike',
+               data={"location_from": "http://localhost:5000/"},
+               follow_redirects = True)
+
+        m2 = Message.query.get(self.m2_id)
+        u1 = User.query.get(self.u1_id)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(m2 in u1.liked_messages, False)
+
+
+    def test_delete_message(self):
+        """tests that a message by the user is properly deleted"""
+
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = c.post(f'/messages/{self.m1_id}/delete',
+                      follow_redirects = True)
+
+
+        u1 = User.query.get(self.u1_id)
+        m1 = Message.query.get(self.m1_id)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(m1 in u1.messages, False)
+
+
+    def test_invlaid_delete_message(self):
+        """tests that a request to delete a message not by the user is
+        rejected"""
+
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = c.post(f'/messages/{self.m2_id}/delete',
+                      follow_redirects = True)
+
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Access unauthorized.", html)
+
+
+
+
+
+
+
+
