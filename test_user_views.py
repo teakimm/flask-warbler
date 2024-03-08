@@ -430,8 +430,10 @@ class UserViewTestCase(TestCase):
 
         self.assertEqual(resp.status_code, 200)
         self.assertIn("@u2", html)
+        self.assertNotIn("@u1", html)
 
-    def test_invalid_user_page(self):
+
+    def test_invalid_user_page(self): #TODO: change test function names to reflect tests
         """Tests to see if a user who is not logged in will be redirected
         if they try to view user page"""
         with app.test_client() as client:
