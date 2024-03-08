@@ -416,7 +416,6 @@ def like_message(message_id):
     current_msg = Message.query.get_or_404(message_id)
     location = request.form["location_from"]
 
-    #TODO: we could append liked message
     if not g.user or (current_msg.user == g.user):
         flash("Access unauthorized.", "danger")
         return redirect("/")

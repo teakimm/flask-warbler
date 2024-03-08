@@ -144,9 +144,14 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(u2.is_followed_by(u1), True)
-            self.assertIn(
-                f'<a href="/users/{self.u1_id}/following">\n                1\n              </a>', html
-                )
+            self.assertIn(f"""<li class="stat">
+            <p class="small">Following</p>
+            <h4>
+              <a href="/users/{self.u1_id}/following">
+                1
+              </a>
+            </h4>
+          </li>""", html)
 
 
     def test_unfollow_user(self):
@@ -166,12 +171,19 @@ class UserViewTestCase(TestCase):
                                follow_redirects=True)
 
             html = resp.get_data(as_text=True)
+            # string_html = str(html)
 
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(u2.is_followed_by(u1), False)
-            self.assertIn(
-                f'<a href="/users/{self.u1_id}/following">\n                0\n              </a>', html
-                )
+
+            self.assertIn(f"""<li class="stat">
+            <p class="small">Following</p>
+            <h4>
+              <a href="/users/{self.u1_id}/following">
+                0
+              </a>
+            </h4>
+          </li>""", html)
 
     def test_delete_user(self):
         """test if logged in user can delete their profile and logged out"""

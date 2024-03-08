@@ -44,14 +44,21 @@ class MessageBaseViewTestCase(TestCase):
         User.query.delete()
 
         u1 = User.signup("u1", "u1@email.com", "password", None)
+        u2 = User.signup("u2", "u2@email.com", "password", None)
+
         db.session.flush()
 
         m1 = Message(text="m1-text", user_id=u1.id)
-        db.session.add_all([m1])
+        m2 = Message(text="m2-text", user_id=u2.id)
+        db.session.add_all([m1,m2])
         db.session.commit()
 
         self.u1_id = u1.id
         self.m1_id = m1.id
+
+        self.u2_id = u2.id
+        self.m2_id = m2.id
+
 
 class MessageAddViewTestCase(MessageBaseViewTestCase):
     def test_add_message(self):
@@ -68,3 +75,30 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             self.assertEqual(resp.status_code, 302)
 
             Message.query.filter_by(text="Hello").one()
+
+    def test_show_message(self):
+        """tests if message details are shown when clickign on a message"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+            resp = c.get(f'/messages/{self.m1_id}')
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("m1-text", html)
+            self.assertIn("@u1", html)
+
+    def test_like_message(self):
+        """tests that like is properly added to message"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = c.post(f'messages/{self.m2_id}/like',
+                      follow_redirects=True)
+
+        m2 = Message.query.get(self.m2_id)
+        u1 = User.query.get(self.u1_id)
+        # breakpoint()
+        self.assertTrue(m2 in u1.liked_messages)
