@@ -56,19 +56,20 @@ class UserViewTestCase(TestCase):
     def tearDown(self):
         db.session.rollback()
 
-    def test_invalid_show_user(self):
+    def test_invalid_show_user(self): #TODO: add docstrings
         with app.test_client() as client:
-            resp = client.get(f'/users/{self.u1_id}',follow_redirects=True)
+            resp = client.get(f'/users/{self.u1_id}', follow_redirects=True)
 
             html = resp.get_data(as_text=True)
             self.assertEqual(resp.status_code, 200)
-            self.assertIn("Access unauthorized.",html)
+            self.assertIn("Access unauthorized.", html)
+            #TODO: check for correct rendered template for all unauth
 
     def test_valid_signup(self):
         with app.test_client() as client:
             resp = client.post('/signup',
                                data={
-                                   "username":"u200",
+                                   "username": "u200",
                                    "password": "anypassword",
                                    "email": "z1@z1.com",
                                    "image_url": ""
@@ -83,7 +84,7 @@ class UserViewTestCase(TestCase):
         with app.test_client() as client:
             resp = client.post('/signup',
                                data={
-                                   "username":"u1",
+                                   "username": "u1",
                                    "password": "anypassword",
                                    "email": "z@z.com",
                                    "image_url": ""
@@ -97,7 +98,7 @@ class UserViewTestCase(TestCase):
         with app.test_client() as client:
             resp = client.post('/signup',
                                data={
-                                   "username":"u12",
+                                   "username": "u12",
                                    "password": "anypassword",
                                    "email": "u1@email.com",
                                    "image_url": ""
@@ -106,7 +107,6 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Email already exists.", html)
-
 
     def test_user_login_success(self):
         """Tests that user gets logged in with valid credentials"""
@@ -154,7 +154,6 @@ class UserViewTestCase(TestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertIn("@u1", html)
 
-
     def test_view_followers(self):
         """Tests that user follower page has all their followers"""
 
@@ -171,7 +170,7 @@ class UserViewTestCase(TestCase):
             html = resp.get_data(as_text=True)
 
             self.assertEqual(resp.status_code, 200)
-            self.assertIn("@u2", html)
+            self.assertIn("@u2", html) #TODO: consider using a 3rd user
 
     def test_invalid_follower_view(self):
         """Tests that logged out users are blocked from viewing user's
@@ -217,7 +216,7 @@ class UserViewTestCase(TestCase):
           </li>""", html)
 
     def test_invalid_follow(self):
-        """Tests user following page has all the people they follow"""
+        """Tests user following page has all the people they follow""" #FIXME: docstring
 
         with app.test_client() as client:
 
@@ -263,7 +262,7 @@ class UserViewTestCase(TestCase):
         """Tests that a user who isn't logged in can't unfollow another user"""
 
         with app.test_client() as client:
-            #user not logged in
+            # user not logged in
             resp = client.post(f'/users/stop-following/{self.u2_id}',
                                follow_redirects=True)
 
@@ -291,9 +290,8 @@ class UserViewTestCase(TestCase):
         """Tests that a user who isn't logged in can't delete own account"""
 
         with app.test_client() as client:
-            #user not logged in
+            # user not logged in
             resp = client.post(f"/users/delete", follow_redirects=True)
-
 
             html = resp.get_data(as_text=True)
 
@@ -340,7 +338,6 @@ class UserViewTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Wrong password", html)
 
-
     def test_invalid_username_update(self):
         """Tests to see if a user tries to update their username with one that
         already exists"""
@@ -385,9 +382,6 @@ class UserViewTestCase(TestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
 
-
-
-
     def test_valid_logout(self):
         """Tests to see if a user can log out and be sent to the login page"""
         with app.test_client() as client:
@@ -397,7 +391,7 @@ class UserViewTestCase(TestCase):
         u1 = User.query.get(self.u1_id)
 
         resp = client.post('/logout', follow_redirects=True)
-        html = resp.get_data(as_text=True)
+        html = resp.get_data(as_text=True) #FIXME: indents should be in line with the client when logged in
 
         self.assertEqual(resp.status_code, 200)
         self.assertIn(f'{u1.username} successfully logged out!', html)
@@ -412,19 +406,8 @@ class UserViewTestCase(TestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
 
-    def test_invalid_logout_form(self):
-        """FIXME:"""
-        with app.test_client() as client:
-            with client.session_transaction() as sess:
-                sess[CURR_USER_KEY] = self.u1_id
-
-
-        resp = client.post('/logout', data={"test": "1"}, follow_redirects=True)
-
-        self.assertEqual(resp.status_code, 200)
-
     def test_user_page(self):
-        """Tests to see if the users page is rendered"""
+        """Tests to see if all users page is rendered"""
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
@@ -442,7 +425,7 @@ class UserViewTestCase(TestCase):
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = client.get('/users', query_string={"q":"u2"})
+        resp = client.get('/users', query_string={"q": "u2"})
         html = resp.get_data(as_text=True)
 
         self.assertEqual(resp.status_code, 200)
@@ -464,7 +447,8 @@ class UserViewTestCase(TestCase):
         if they try to view user following page"""
         with app.test_client() as client:
 
-            resp = client.get(f'/users/{self.u1_id}/following', follow_redirects=True)
+            resp = client.get(
+                f'/users/{self.u1_id}/following', follow_redirects=True)
             html = resp.get_data(as_text=True)
 
             self.assertEqual(resp.status_code, 200)
@@ -488,17 +472,16 @@ class UserViewTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("m2-text", html)
         self.assertIn("bi-heart-fill", html)
-        self.assertIn("@u2",html)
+        self.assertIn("@u2", html)
 
     def test_invalid_like_page(self):
         """Tests to see if a user who is not logged in will be redirected
         if they try to view user likes page"""
         with app.test_client() as client:
 
-            resp = client.get(f'/users/{self.u1_id}/likes', follow_redirects=True)
+            resp = client.get(
+                f'/users/{self.u1_id}/likes', follow_redirects=True)
             html = resp.get_data(as_text=True)
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
-
-

@@ -32,8 +32,8 @@ db.create_all()
 
 class MessageModelTestCase(TestCase):
     def setUp(self):
-        User.query.delete()
         Message.query.delete()
+        User.query.delete()
 
         u1 = User.signup("u1", "u1@email.com", "password", None)
         u2 = User.signup("u2", "u2@email.com", "password", None)

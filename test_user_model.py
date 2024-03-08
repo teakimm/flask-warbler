@@ -4,7 +4,7 @@
 #
 #    python -m unittest test_user_model.py
 
-
+from app import app
 import os
 from unittest import TestCase
 from sqlalchemy.exc import IntegrityError
@@ -135,4 +135,7 @@ class UserModelTestCase(TestCase):
         self.assertEqual(invalid_username, False)
         self.assertEqual(invalid_password, False)
 
-    # TODO: try to use assertFalse & asserTrue
+    def test_repr(self):
+        """Test repr"""
+        u1 = User.query.get(self.u1_id)
+        self.assertEqual(str(u1), f"<User #{self.u1_id}: {u1.username}, {u1.email}>" )

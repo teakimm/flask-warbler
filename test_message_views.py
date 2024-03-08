@@ -142,7 +142,25 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
         u1 = User.query.get(self.u1_id)
 
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(m2 in u1.liked_messages, True)
+        self.assertEqual(m2 in u1.liked_messages, True) #TODO: test for redirect
+
+
+
+    def test_invalid_like_message(self):
+        """tests that a user who is not logged in will be redirected
+        when liking a message"""
+        with app.test_client() as c:
+
+            resp = c.post(f'/messages/{self.m2_id}/like',
+                        data={"location_from": "http://localhost:5000/"},
+                        follow_redirects=True)
+
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
 
     def test_unlike_message(self):
         """tests that like is properly added to message"""
@@ -161,7 +179,26 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
                       follow_redirects=True)
 
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(m2 in u1.liked_messages, False)
+        self.assertEqual(m2 in u1.liked_messages, False)  #TODO: test for redirect
+
+
+    def test_invalid_unlike_message(self):
+        """tests that a user who is not logged in will be redirected when
+        unliking a message"""
+        with app.test_client() as c:
+
+            resp = c.post(f'/messages/{self.m2_id}/unlike',
+                        data={"location_from": "http://localhost:5000/"},
+                        follow_redirects=True)
+
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
+
+
 
     def test_delete_message(self):
         """tests that a message by the user is properly deleted"""
@@ -170,15 +207,17 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = c.post(f'/messages/{self.m1_id}/delete',
-                      follow_redirects=True)
+            resp = c.post(f'/messages/{self.m1_id}/delete',
+                        follow_redirects=True)
 
-        u1 = User.query.get(self.u1_id)
-        m1 = Message.query.get(self.m1_id)
+            u1 = User.query.get(self.u1_id)
+            m1 = Message.query.get(self.m1_id)
+            html = resp.get_data(as_text=True)
 
-        #TODO: test on the model AND the ui level
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(m1 in u1.messages, False)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(m1 in u1.messages, False)
+            self.assertNotIn("m1-text", html)
 
     def test_invalid_delete_message(self):
         """tests that a request to delete a message not by the user is
@@ -188,10 +227,10 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = c.post(f'/messages/{self.m2_id}/delete',
-                      follow_redirects=True)
+            resp = c.post(f'/messages/{self.m2_id}/delete',
+                        follow_redirects=True)
 
-        html = resp.get_data(as_text=True)
+            html = resp.get_data(as_text=True)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("Access unauthorized.", html)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
