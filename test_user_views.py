@@ -4,7 +4,7 @@ from app import app, CURR_USER_KEY
 import os
 from unittest import TestCase
 
-from models import db, Message, User
+from models import db, User
 
 # BEFORE we import our app, let's set an environmental variable
 # to use a different database for tests (we need to do this
@@ -77,7 +77,8 @@ class UserViewTestCase(TestCase):
             self.assertIn("Invalid credentials.", html)
 
     def test_view_following(self):
-        """Tests that user is able to see following pages for any user"""
+        """Tests user following page has all the people they follow"""
+
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
@@ -94,7 +95,8 @@ class UserViewTestCase(TestCase):
             self.assertIn("@u1", html)
 
     def test_view_followers(self):
-        """Tests that user is able to see follower page for any user"""
+        """Tests that user follower page has all their followers"""
+
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
@@ -110,9 +112,10 @@ class UserViewTestCase(TestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertIn("@u2", html)
 
-    def test_logged_out_view(self):
+    def test_invalid_follower_view(self):
         """Tests that logged out users are blocked from viewing user's
         following page"""
+
         with app.test_client() as client:
 
             resp = client.get(
@@ -125,7 +128,6 @@ class UserViewTestCase(TestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
 
-
     def test_follow_user(self):
         """Tests that user correctly can follow another user"""
 
@@ -136,14 +138,14 @@ class UserViewTestCase(TestCase):
             u1 = User.query.get(self.u1_id)
             u2 = User.query.get(self.u2_id)
 
-
             resp = client.post(f'/users/follow/{self.u2_id}',
                                follow_redirects=True)
 
             html = resp.get_data(as_text=True)
-
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(u2.is_followed_by(u1), True)
+
+            # tests that following counter has incremented up
             self.assertIn(f"""<li class="stat">
             <p class="small">Following</p>
             <h4>
@@ -153,9 +155,8 @@ class UserViewTestCase(TestCase):
             </h4>
           </li>""", html)
 
-
     def test_unfollow_user(self):
-        """Tests that user correctly can unfollow another user"""
+        """Tests that user can correctly unfollow another user"""
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
@@ -164,18 +165,18 @@ class UserViewTestCase(TestCase):
             u1 = User.query.get(self.u1_id)
             u2 = User.query.get(self.u2_id)
 
-            #u1 is now following u2
+            # u1 is now following u2
             u1.following.append(u2)
 
             resp = client.post(f'/users/stop-following/{self.u2_id}',
                                follow_redirects=True)
 
             html = resp.get_data(as_text=True)
-            # string_html = str(html)
 
             self.assertEqual(resp.status_code, 200)
             self.assertEqual(u2.is_followed_by(u1), False)
 
+            # tests that following counter has incremented down
             self.assertIn(f"""<li class="stat">
             <p class="small">Following</p>
             <h4>
@@ -186,7 +187,7 @@ class UserViewTestCase(TestCase):
           </li>""", html)
 
     def test_delete_user(self):
-        """test if logged in user can delete their profile and logged out"""
+        """test if logged in user can delete their profile and is logged out"""
 
         with app.test_client() as client:
             with client.session_transaction() as sess:
@@ -197,7 +198,7 @@ class UserViewTestCase(TestCase):
         html = resp.get_data(as_text=True)
 
         self.assertIn('User has been deleted, goodbye!', html)
-        #querying for a deleted user should give back None
+        # querying for a deleted user should give back None
         self.assertEqual(User.query.get(self.u1_id), None)
 
     def test_update_profile(self):
@@ -209,11 +210,11 @@ class UserViewTestCase(TestCase):
 
         resp = client.post('/users/profile',
                            data={"username": "newName",
-                                 "email" : "new@email.com",
-                                 "bio" : "this is the new me.",
+                                 "email": "new@email.com",
+                                 "bio": "this is the new me.",
                                  "password": "password"},
-                                 follow_redirects=True
-                                 )
+                           follow_redirects=True
+                           )
 
         html = resp.get_data(as_text=True)
 
@@ -221,20 +222,19 @@ class UserViewTestCase(TestCase):
         self.assertIn("@newName", html)
         self.assertIn("this is the new me", html)
 
-
-    def test_invalid_user_update(self):
-        """Tests to see if a user tries to update their profile with an existing
-        username will get a form warning message"""
+    def test_invalid_username_update(self):
+        """Tests to see if a user tries to update their username with one that
+        already exists"""
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
         resp = client.post('/users/profile',
                            data={"username": "u2",
-                                 "email" : "u1@email.com",
+                                 "email": "u1@email.com",
                                  "password": "password"},
-                                 follow_redirects=True
-                                 )
+                           follow_redirects=True
+                           )
 
         html = resp.get_data(as_text=True)
 

@@ -56,18 +56,20 @@ class MessageModelTestCase(TestCase):
         """test Message model creates a Message instance"""
         m1 = Message.query.get(self.m1_id)
 
-        self.assertEqual(m1.text, "test message")
         self.assertIsInstance(m1, Message)
+        self.assertEqual(m1.text, "test message")
 
     def test_user_relationship(self):
-        """test proper User/Message models relationship setup"""
+        """test proper User/Message models relationship"""
+
         m1 = Message.query.get(self.m1_id)
         u1 = User.query.get(self.u1_id)
 
+        # check u1 is the author of m1
         self.assertEqual(m1.user, u1)
 
-    def test_null_message(self):
-        """tests an Error if non_nullable fields are left null"""
+    def test_null_message_fields(self):
+        """test if Error is raised if non-nullable fields are left null"""
         m2 = Message(text=None, user_id=self.u2_id)
         db.session.add(m2)
 

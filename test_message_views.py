@@ -5,6 +5,7 @@
 #    FLASK_DEBUG=False python -m unittest test_message_views.py
 
 
+from app import app, CURR_USER_KEY
 import os
 from unittest import TestCase
 
@@ -19,7 +20,6 @@ os.environ['DATABASE_URL'] = "postgresql:///warbler_test"
 
 # Now we can import app
 
-from app import app, CURR_USER_KEY
 
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 
@@ -51,7 +51,7 @@ class MessageBaseViewTestCase(TestCase):
 
         m1 = Message(text="m1-text", user_id=u1.id)
         m2 = Message(text="m2-text", user_id=u2.id)
-        db.session.add_all([m1,m2])
+        db.session.add_all([m1, m2])
         db.session.commit()
 
         self.u1_id = u1.id
@@ -78,7 +78,8 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             Message.query.filter_by(text="Hello").one()
 
     def test_show_message(self):
-        """tests if message details are shown when clickign on a message"""
+        """tests if message details are shown when clicking on a message"""
+
         with app.test_client() as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
@@ -92,13 +93,14 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
 
     def test_like_message(self):
         """tests that like is properly added to message"""
+
         with app.test_client() as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
         resp = c.post(f'/messages/{self.m2_id}/like',
-               data={"location_from": "http://localhost:5000/"},
-               follow_redirects = True)
+                      data={"location_from": "http://localhost:5000/"},
+                      follow_redirects=True)
 
         m2 = Message.query.get(self.m2_id)
         u1 = User.query.get(self.u1_id)
@@ -106,28 +108,24 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(m2 in u1.liked_messages, True)
 
-
     def test_unlike_message(self):
         """tests that like is properly added to message"""
         with app.test_client() as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        #To unlike, we must have a liked post
-        c.post(f'/messages/{self.m2_id}/like',
-               data={"location_from": "http://localhost:5000/"},
-               follow_redirects = True)
-
-        resp = c.post(f'/messages/{self.m2_id}/unlike',
-               data={"location_from": "http://localhost:5000/"},
-               follow_redirects = True)
-
         m2 = Message.query.get(self.m2_id)
         u1 = User.query.get(self.u1_id)
 
+        # add message to liked messages
+        u1.liked_messages.add(m2)
+
+        resp = c.post(f'/messages/{self.m2_id}/unlike',
+                      data={"location_from": "http://localhost:5000/"},
+                      follow_redirects=True)
+
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(m2 in u1.liked_messages, False)
-
 
     def test_delete_message(self):
         """tests that a message by the user is properly deleted"""
@@ -137,17 +135,16 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
                 sess[CURR_USER_KEY] = self.u1_id
 
         resp = c.post(f'/messages/{self.m1_id}/delete',
-                      follow_redirects = True)
-
+                      follow_redirects=True)
 
         u1 = User.query.get(self.u1_id)
         m1 = Message.query.get(self.m1_id)
 
+        #TODO: test on the model AND the ui level
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(m1 in u1.messages, False)
 
-
-    def test_invlaid_delete_message(self):
+    def test_invalid_delete_message(self):
         """tests that a request to delete a message not by the user is
         rejected"""
 
@@ -156,17 +153,9 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
                 sess[CURR_USER_KEY] = self.u1_id
 
         resp = c.post(f'/messages/{self.m2_id}/delete',
-                      follow_redirects = True)
+                      follow_redirects=True)
 
         html = resp.get_data(as_text=True)
 
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Access unauthorized.", html)
-
-
-
-
-
-
-
-
