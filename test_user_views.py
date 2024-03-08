@@ -4,7 +4,7 @@ from app import app, CURR_USER_KEY
 import os
 from unittest import TestCase
 
-from models import db, User
+from models import db, User, Message
 
 # BEFORE we import our app, let's set an environmental variable
 # to use a different database for tests (we need to do this
@@ -37,13 +37,21 @@ class UserViewTestCase(TestCase):
         User.query.delete()
 
         u1 = User.signup("u1", "u1@email.com", "password", None)
-
         u2 = User.signup("u2", "u2@email.com", "password", None)
 
+        db.session.flush()
+        db.session.commit()
+
+        m1 = Message(text="m1-text", user_id=u1.id)
+        m2 = Message(text="m2-text", user_id=u2.id)
+        db.session.add_all([m1, m2])
         db.session.commit()
 
         self.u1_id = u1.id
+        self.m1_id = m1.id
+
         self.u2_id = u2.id
+        self.m2_id = m2.id
 
     def tearDown(self):
         db.session.rollback()
@@ -274,6 +282,26 @@ class UserViewTestCase(TestCase):
         self.assertIn("@newName", html)
         self.assertIn("this is the new me", html)
 
+    def test_invalid_profile_update_password(self):
+        """tests to see if the user can change their profile using a wrong
+        password"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = client.post('/users/profile',
+                           data={"username": "newName",
+                                 "email": "new@email.com",
+                                 "bio": "this is the new me.",
+                                 "password": "wrongpassword"},
+                           )
+
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Wrong password", html)
+
+
     def test_invalid_username_update(self):
         """Tests to see if a user tries to update their username with one that
         already exists"""
@@ -292,3 +320,134 @@ class UserViewTestCase(TestCase):
 
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Username already exists.", html)
+
+    def test_display_user_update_page(self):
+        """Tests to see if the user edit page is rendered with existing
+        user info"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = client.get('/users/profile')
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Edit Your Profile.", html)
+        self.assertIn('value="u1"', html)
+        self.assertIn('value="u1@email.com"', html)
+
+
+    def test_valid_logout(self):
+        """Tests to see if a user can log out and be sent to the login page"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        u1 = User.query.get(self.u1_id)
+
+        resp = client.post('/logout', follow_redirects=True)
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(f'{u1.username} successfully logged out!', html)
+
+    def test_invalid_logout(self):
+        """Tests to see if a user who is not logged in will be rejected
+        and redirected if they try to logout"""
+        with app.test_client() as client:
+            resp = client.post('/logout', follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
+    def test_invalid_logout_form(self):
+        """FIXME:"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+
+        resp = client.post('/logout', data={"test": "1"}, follow_redirects=True)
+
+        self.assertEqual(resp.status_code, 200)
+
+    def test_user_page(self):
+        """Tests to see if the users page is rendered"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = client.get('/users')
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("@u1", html)
+        self.assertIn("@u2", html)
+
+    def test_search_user_page(self):
+        """Tests to see users page is rendered for a search query"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = client.get('/users', query_string={"q":"u2"})
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("@u2", html)
+
+    def test_invalid_user_page(self):
+        """Tests to see if a user who is not logged in will be redirected
+        if they try to view user page"""
+        with app.test_client() as client:
+
+            resp = client.get('/users', follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
+    def test_invalid_following_page(self):
+        """Tests to see if a user who is not logged in will be redirected
+        if they try to view user following page"""
+        with app.test_client() as client:
+
+            resp = client.get(f'/users/{self.u1_id}/following', follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
+    def test_user_likes(self):
+        """Tests to see if a user who is not logged in will be redirected
+        if they try to view user likes page"""
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        u1 = User.query.get(self.u1_id)
+        m2 = Message.query.get(self.m2_id)
+
+        u1.liked_messages.add(m2)
+
+        resp = client.get(f'/users/{self.u1_id}/likes', follow_redirects=True)
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("m2-text", html)
+        self.assertIn("bi-heart-fill", html)
+        self.assertIn("@u2",html)
+
+    def test_invalid_like_page(self):
+        """Tests to see if a user who is not logged in will be redirected
+        if they try to view user likes page"""
+        with app.test_client() as client:
+
+            resp = client.get(f'/users/{self.u1_id}/likes', follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
+

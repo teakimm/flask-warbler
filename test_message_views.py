@@ -77,6 +77,29 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
 
             Message.query.filter_by(text="Hello").one()
 
+    def test_new_message_page(self):
+        """Tests if the new message page is rendered correctly"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+            resp = c.get(f'/messages/new')
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Add my message!", html)
+
+    def test_invalid_new_message_page(self):
+        """Tests a user who is not logged in will be redirected if they
+        try to create a new message"""
+        with app.test_client() as c:
+
+            resp = c.get(f'/messages/new', follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
     def test_show_message(self):
         """tests if message details are shown when clicking on a message"""
 
