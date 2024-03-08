@@ -154,6 +154,7 @@ class UserViewTestCase(TestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertIn("@u1", html)
 
+
     def test_view_followers(self):
         """Tests that user follower page has all their followers"""
 
@@ -215,6 +216,18 @@ class UserViewTestCase(TestCase):
             </h4>
           </li>""", html)
 
+    def test_invalid_follow(self):
+        """Tests user following page has all the people they follow"""
+
+        with app.test_client() as client:
+
+            resp = client.post(f'/users/follow/{self.u2_id}',
+                               follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn('Access unauthorized.', html)
+
     def test_unfollow_user(self):
         """Tests that user can correctly unfollow another user"""
 
@@ -246,6 +259,19 @@ class UserViewTestCase(TestCase):
             </h4>
           </li>""", html)
 
+    def test_invalid_unfollow_not_logged_in(self):
+        """Tests that a user who isn't logged in can't unfollow another user"""
+
+        with app.test_client() as client:
+            #user not logged in
+            resp = client.post(f'/users/stop-following/{self.u2_id}',
+                               follow_redirects=True)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn('Access unauthorized.', html)
+
     def test_delete_user(self):
         """test if logged in user can delete their profile and is logged out"""
 
@@ -260,6 +286,19 @@ class UserViewTestCase(TestCase):
         self.assertIn('User has been deleted, goodbye!', html)
         # querying for a deleted user should give back None
         self.assertEqual(User.query.get(self.u1_id), None)
+
+    def test_invalid_delete_user(self):
+        """Tests that a user who isn't logged in can't delete own account"""
+
+        with app.test_client() as client:
+            #user not logged in
+            resp = client.post(f"/users/delete", follow_redirects=True)
+
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn('Access unauthorized.', html)
 
     def test_update_profile(self):
         """tests to see if the user can change their profile using valid
@@ -335,6 +374,18 @@ class UserViewTestCase(TestCase):
         self.assertIn("Edit Your Profile.", html)
         self.assertIn('value="u1"', html)
         self.assertIn('value="u1@email.com"', html)
+
+    def test_invalid_display_user_update_page(self):
+        """Tests to see if a user who isn't logged in gets redirected if trying
+        to access the edit profile page"""
+        with app.test_client() as client:
+            resp = client.get('/users/profile', follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
+
 
 
     def test_valid_logout(self):

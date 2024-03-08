@@ -114,6 +114,19 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             self.assertIn("m1-text", html)
             self.assertIn("@u1", html)
 
+    def test_invalid_show_message(self):
+        """Tests a user who is not logged in will be redirected if they
+        try to show a specific message"""
+        with app.test_client() as c:
+
+            resp = c.get(f'/messages/{self.m1_id}', follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
+
+
+
     def test_like_message(self):
         """tests that like is properly added to message"""
 
