@@ -48,6 +48,58 @@ class UserViewTestCase(TestCase):
     def tearDown(self):
         db.session.rollback()
 
+    def test_invalid_show_user(self):
+        with app.test_client() as client:
+            resp = client.get(f'/users/{self.u1_id}',follow_redirects=True)
+
+            html = resp.get_data(as_text=True)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.",html)
+
+    def test_valid_signup(self):
+        with app.test_client() as client:
+            resp = client.post('/signup',
+                               data={
+                                   "username":"u200",
+                                   "password": "anypassword",
+                                   "email": "z1@z1.com",
+                                   "image_url": ""
+                               },
+                               follow_redirects=True)
+
+            html = resp.get_data(as_text=True)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("@u200", html)
+
+    def test_invalid_signup_username(self):
+        with app.test_client() as client:
+            resp = client.post('/signup',
+                               data={
+                                   "username":"u1",
+                                   "password": "anypassword",
+                                   "email": "z@z.com",
+                                   "image_url": ""
+                               })
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Username already exists.", html)
+
+    def test_invalid_signup_email(self):
+        with app.test_client() as client:
+            resp = client.post('/signup',
+                               data={
+                                   "username":"u12",
+                                   "password": "anypassword",
+                                   "email": "u1@email.com",
+                                   "image_url": ""
+                               })
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Email already exists.", html)
+
+
     def test_user_login_success(self):
         """Tests that user gets logged in with valid credentials"""
 
