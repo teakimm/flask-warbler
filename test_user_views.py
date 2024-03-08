@@ -56,16 +56,19 @@ class UserViewTestCase(TestCase):
     def tearDown(self):
         db.session.rollback()
 
-    def test_invalid_show_user(self): #TODO: add docstrings
+    def test_logged_out_show_user(self):
+        """tests that user who isn't logged in can't view anothe ruser"""
         with app.test_client() as client:
             resp = client.get(f'/users/{self.u1_id}', follow_redirects=True)
 
             html = resp.get_data(as_text=True)
             self.assertEqual(resp.status_code, 200)
-            self.assertIn("Access unauthorized.", html)
-            #TODO: check for correct rendered template for all unauth
+            self.assertIn("Access unauthorized", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
     def test_valid_signup(self):
+        """tests that user can signup with valid credentials"""
         with app.test_client() as client:
             resp = client.post('/signup',
                                data={
@@ -81,6 +84,7 @@ class UserViewTestCase(TestCase):
             self.assertIn("@u200", html)
 
     def test_invalid_signup_username(self):
+        """tests that user can't signup with invalid username"""
         with app.test_client() as client:
             resp = client.post('/signup',
                                data={
@@ -95,6 +99,8 @@ class UserViewTestCase(TestCase):
             self.assertIn("Username already exists.", html)
 
     def test_invalid_signup_email(self):
+        """tests that user can't signup with invalid email"""
+
         with app.test_client() as client:
             resp = client.post('/signup',
                                data={
@@ -172,7 +178,7 @@ class UserViewTestCase(TestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertIn("@u2", html) #TODO: consider using a 3rd user
 
-    def test_invalid_follower_view(self):
+    def test_logged_out_follower_view(self):
         """Tests that logged out users are blocked from viewing user's
         following page"""
 
@@ -187,6 +193,8 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
     def test_follow_user(self):
         """Tests that user correctly can follow another user"""
@@ -215,8 +223,8 @@ class UserViewTestCase(TestCase):
             </h4>
           </li>""", html)
 
-    def test_invalid_follow(self):
-        """Tests user following page has all the people they follow""" #FIXME: docstring
+    def test_logged_out_follow(self):
+        """Tests that logged out user can't view follow page"""
 
         with app.test_client() as client:
 
@@ -226,6 +234,8 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn('Access unauthorized.', html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
     def test_unfollow_user(self):
         """Tests that user can correctly unfollow another user"""
@@ -258,7 +268,7 @@ class UserViewTestCase(TestCase):
             </h4>
           </li>""", html)
 
-    def test_invalid_unfollow_not_logged_in(self):
+    def test_logged_out_unfollow(self):
         """Tests that a user who isn't logged in can't unfollow another user"""
 
         with app.test_client() as client:
@@ -270,6 +280,8 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn('Access unauthorized.', html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
     def test_delete_user(self):
         """test if logged in user can delete their profile and is logged out"""
@@ -278,15 +290,15 @@ class UserViewTestCase(TestCase):
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = client.post(f"/users/delete", follow_redirects=True)
+            resp = client.post(f"/users/delete", follow_redirects=True)
 
-        html = resp.get_data(as_text=True)
+            html = resp.get_data(as_text=True)
 
-        self.assertIn('User has been deleted, goodbye!', html)
-        # querying for a deleted user should give back None
-        self.assertEqual(User.query.get(self.u1_id), None)
+            self.assertIn('User has been deleted, goodbye!', html)
+            # querying for a deleted user should give back None
+            self.assertEqual(User.query.get(self.u1_id), None)
 
-    def test_invalid_delete_user(self):
+    def test_logged_out_delete_user(self):
         """Tests that a user who isn't logged in can't delete own account"""
 
         with app.test_client() as client:
@@ -297,6 +309,8 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn('Access unauthorized.', html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
     def test_update_profile(self):
         """tests to see if the user can change their profile using valid
@@ -305,19 +319,19 @@ class UserViewTestCase(TestCase):
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = client.post('/users/profile',
-                           data={"username": "newName",
-                                 "email": "new@email.com",
-                                 "bio": "this is the new me.",
-                                 "password": "password"},
-                           follow_redirects=True
-                           )
+            resp = client.post('/users/profile',
+                            data={"username": "newName",
+                                    "email": "new@email.com",
+                                    "bio": "this is the new me.",
+                                    "password": "password"},
+                            follow_redirects=True
+                            )
 
-        html = resp.get_data(as_text=True)
+            html = resp.get_data(as_text=True)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("@newName", html)
-        self.assertIn("this is the new me", html)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("@newName", html)
+            self.assertIn("this is the new me", html)
 
     def test_invalid_profile_update_password(self):
         """tests to see if the user can change their profile using a wrong
@@ -326,17 +340,17 @@ class UserViewTestCase(TestCase):
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = client.post('/users/profile',
-                           data={"username": "newName",
-                                 "email": "new@email.com",
-                                 "bio": "this is the new me.",
-                                 "password": "wrongpassword"},
-                           )
+            resp = client.post('/users/profile',
+                            data={"username": "newName",
+                                    "email": "new@email.com",
+                                    "bio": "this is the new me.",
+                                    "password": "wrongpassword"},
+                            )
 
-        html = resp.get_data(as_text=True)
+            html = resp.get_data(as_text=True)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("Wrong password", html)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Wrong password", html)
 
     def test_invalid_username_update(self):
         """Tests to see if a user tries to update their username with one that
@@ -364,15 +378,15 @@ class UserViewTestCase(TestCase):
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = client.get('/users/profile')
-        html = resp.get_data(as_text=True)
+            resp = client.get('/users/profile')
+            html = resp.get_data(as_text=True)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("Edit Your Profile.", html)
-        self.assertIn('value="u1"', html)
-        self.assertIn('value="u1@email.com"', html)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Edit Your Profile.", html)
+            self.assertIn('value="u1"', html)
+            self.assertIn('value="u1@email.com"', html)
 
-    def test_invalid_display_user_update_page(self):
+    def test_logged_out_display_user_update_page(self):
         """Tests to see if a user who isn't logged in gets redirected if trying
         to access the edit profile page"""
         with app.test_client() as client:
@@ -381,6 +395,8 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
     def test_valid_logout(self):
         """Tests to see if a user can log out and be sent to the login page"""
@@ -388,13 +404,13 @@ class UserViewTestCase(TestCase):
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        u1 = User.query.get(self.u1_id)
+            u1 = User.query.get(self.u1_id)
 
-        resp = client.post('/logout', follow_redirects=True)
-        html = resp.get_data(as_text=True) #FIXME: indents should be in line with the client when logged in
+            resp = client.post('/logout', follow_redirects=True)
+            html = resp.get_data(as_text=True)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn(f'{u1.username} successfully logged out!', html)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn(f'{u1.username} successfully logged out!', html)
 
     def test_invalid_logout(self):
         """Tests to see if a user who is not logged in will be rejected
@@ -412,12 +428,12 @@ class UserViewTestCase(TestCase):
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = client.get('/users')
-        html = resp.get_data(as_text=True)
+            resp = client.get('/users')
+            html = resp.get_data(as_text=True)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("@u1", html)
-        self.assertIn("@u2", html)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("@u1", html)
+            self.assertIn("@u2", html)
 
     def test_search_user_page(self):
         """Tests to see users page is rendered for a search query"""
@@ -425,15 +441,15 @@ class UserViewTestCase(TestCase):
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        resp = client.get('/users', query_string={"q": "u2"})
-        html = resp.get_data(as_text=True)
+            resp = client.get('/users', query_string={"q": "u2"})
+            html = resp.get_data(as_text=True)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("@u2", html)
-        self.assertNotIn("@u1", html)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("@u2", html)
+            self.assertNotIn("@u1", html)
 
 
-    def test_invalid_user_page(self): #TODO: change test function names to reflect tests
+    def test_logged_out_user_page(self):
         """Tests to see if a user who is not logged in will be redirected
         if they try to view user page"""
         with app.test_client() as client:
@@ -443,8 +459,10 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
-    def test_invalid_following_page(self):
+    def test_logged_out_following_page(self):
         """Tests to see if a user who is not logged in will be redirected
         if they try to view user following page"""
         with app.test_client() as client:
@@ -455,6 +473,8 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
     def test_user_likes(self):
         """Tests to see if a user who is not logged in will be redirected
@@ -463,20 +483,20 @@ class UserViewTestCase(TestCase):
             with client.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        u1 = User.query.get(self.u1_id)
-        m2 = Message.query.get(self.m2_id)
+            u1 = User.query.get(self.u1_id)
+            m2 = Message.query.get(self.m2_id)
 
-        u1.liked_messages.add(m2)
+            u1.liked_messages.add(m2)
 
-        resp = client.get(f'/users/{self.u1_id}/likes', follow_redirects=True)
-        html = resp.get_data(as_text=True)
+            resp = client.get(f'/users/{self.u1_id}/likes', follow_redirects=True)
+            html = resp.get_data(as_text=True)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("m2-text", html)
-        self.assertIn("bi-heart-fill", html)
-        self.assertIn("@u2", html)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("m2-text", html)
+            self.assertIn("bi-heart-fill", html)
+            self.assertIn("@u2", html)
 
-    def test_invalid_like_page(self):
+    def test_logged_out_like_page(self):
         """Tests to see if a user who is not logged in will be redirected
         if they try to view user likes page"""
         with app.test_client() as client:
@@ -487,3 +507,5 @@ class UserViewTestCase(TestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)

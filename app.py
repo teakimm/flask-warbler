@@ -458,6 +458,10 @@ def unlike_message(message_id):
 
     return redirect(f"{location}#{ message_id }")
 
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("404.html")
+
 
 @app.after_request
 def add_header(response):

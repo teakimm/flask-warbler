@@ -89,7 +89,7 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Add my message!", html)
 
-    def test_invalid_new_message_page(self):
+    def test_logged_out_new_message_page(self):
         """Tests a user who is not logged in will be redirected if they
         try to create a new message"""
         with app.test_client() as c:
@@ -99,6 +99,8 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
     def test_show_message(self):
         """tests if message details are shown when clicking on a message"""
@@ -114,7 +116,7 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             self.assertIn("m1-text", html)
             self.assertIn("@u1", html)
 
-    def test_invalid_show_message(self):
+    def test_logged_out_show_message(self):
         """Tests a user who is not logged in will be redirected if they
         try to show a specific message"""
         with app.test_client() as c:
@@ -124,7 +126,8 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
-
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
 
     def test_like_message(self):
@@ -146,7 +149,7 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
 
 
 
-    def test_invalid_like_message(self):
+    def test_logged_out_like_message(self):
         """tests that a user who is not logged in will be redirected
         when liking a message"""
         with app.test_client() as c:
@@ -160,6 +163,8 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
 
     def test_unlike_message(self):
@@ -168,21 +173,21 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-        m2 = Message.query.get(self.m2_id)
-        u1 = User.query.get(self.u1_id)
+            m2 = Message.query.get(self.m2_id)
+            u1 = User.query.get(self.u1_id)
 
-        # add message to liked messages
-        u1.liked_messages.add(m2)
+            # add message to liked messages
+            u1.liked_messages.add(m2)
 
-        resp = c.post(f'/messages/{self.m2_id}/unlike',
-                      data={"location_from": "http://localhost:5000/"},
-                      follow_redirects=True)
+            resp = c.post(f'/messages/{self.m2_id}/unlike',
+                        data={"location_from": "http://localhost:5000/"},
+                        follow_redirects=True)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(m2 in u1.liked_messages, False)  #TODO: test for redirect
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(m2 in u1.liked_messages, False)  #TODO: test for redirect
 
 
-    def test_invalid_unlike_message(self):
+    def test_logged_out_unlike_message(self):
         """tests that a user who is not logged in will be redirected when
         unliking a message"""
         with app.test_client() as c:
@@ -196,6 +201,8 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
 
 
 
@@ -219,7 +226,7 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             self.assertEqual(m1 in u1.messages, False)
             self.assertNotIn("m1-text", html)
 
-    def test_invalid_delete_message(self):
+    def test_logged_out_delete_message(self):
         """tests that a request to delete a message not by the user is
         rejected"""
 
@@ -234,3 +241,5 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
 
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Access unauthorized.", html)
+            self.assertIn("Log in", html)
+            self.assertIn("New to Warbler", html)
